@@ -335,3 +335,137 @@ func TestGetValidCategories(t *testing.T) {
 	assert.Equal(t, expected, categories)
 	assert.Len(t, categories, 5)
 }
+
+func TestItem_UpdatePartial(t *testing.T) {
+	tests := []struct {
+		name            string
+		inputName       *string
+		inputBrand      *string
+		inputPrice      *int
+		wantErr         bool
+		expectedErr     string
+	}{
+		{
+			name:      "正常系: nameのみ更新",
+			inputName: stringPtr("更新された名前"),
+			wantErr:   false,
+		},
+		{
+			name:       "正常系: brandのみ更新",
+			inputBrand: stringPtr("更新されたブランド"),
+			wantErr:    false,
+		},
+		{
+			name:       "正常系: purchase_priceのみ更新",
+			inputPrice: intPtr(250000),
+			wantErr:    false,
+		},
+		{
+			name:       "正常系: 全フィールド更新",
+			inputName:  stringPtr("全て更新"),
+			inputBrand: stringPtr("全て更新ブランド"),
+			inputPrice: intPtr(300000),
+			wantErr:    false,
+		},
+		{
+			name:    "正常系: 全フィールドnil（何も更新しない）",
+			wantErr: false,
+		},
+		{
+			name:        "異常系: 空のname",
+			inputName:   stringPtr(""),
+			wantErr:     true,
+			expectedErr: "name is required",
+		},
+		{
+			name:        "異常系: 100文字超過のname",
+			inputName:   stringPtr("ロレックス デイトナ 16520 18K イエローゴールド ブラック文字盤 自動巻き クロノグラフ メンズ 腕時計 1988年製 ヴィンテージ 希少 コレクション アイテム"),
+			wantErr:     true,
+			expectedErr: "name must be 100 characters or less",
+		},
+		{
+			name:        "異常系: 空のbrand",
+			inputBrand:  stringPtr(""),
+			wantErr:     true,
+			expectedErr: "brand is required",
+		},
+		{
+			name:        "異常系: 100文字超過のbrand",
+			inputBrand:  stringPtr("ROLEX SA Geneva Switzerland Official Authorized Dealer Store Premium Collection Limited Edition Special"),
+			wantErr:     true,
+			expectedErr: "brand must be 100 characters or less",
+		},
+		{
+			name:        "異常系: 負のpurchase_price",
+			inputPrice:  intPtr(-1),
+			wantErr:     true,
+			expectedErr: "purchase_price must be 0 or greater",
+		},
+		{
+			name:       "正常系: purchase_priceが0",
+			inputPrice: intPtr(0),
+			wantErr:    false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// 各テストケースで新しいアイテムを作成
+			item, err := NewItem("初期アイテム", "時計", "初期ブランド", 100000, "2023-01-01")
+			require.NoError(t, err)
+
+			originalUpdatedAt := item.UpdatedAt
+			originalCategory := item.Category
+			originalPurchaseDate := item.PurchaseDate
+			originalCreatedAt := item.CreatedAt
+
+			time.Sleep(1 * time.Millisecond) // UpdatedAt の変更を確認するため
+
+			err = item.UpdatePartial(tt.inputName, tt.inputBrand, tt.inputPrice)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedErr)
+				return
+			}
+
+			assert.NoError(t, err)
+
+			// 更新されたフィールドの確認
+			if tt.inputName != nil {
+				assert.Equal(t, *tt.inputName, item.Name)
+			} else {
+				assert.Equal(t, "初期アイテム", item.Name) // 元の値のまま
+			}
+
+			if tt.inputBrand != nil {
+				assert.Equal(t, *tt.inputBrand, item.Brand)
+			} else {
+				assert.Equal(t, "初期ブランド", item.Brand) // 元の値のまま
+			}
+
+			if tt.inputPrice != nil {
+				assert.Equal(t, *tt.inputPrice, item.PurchasePrice)
+			} else {
+				assert.Equal(t, 100000, item.PurchasePrice) // 元の値のまま
+			}
+
+			// UpdatedAt が更新されているかチェック
+			assert.True(t, item.UpdatedAt.After(originalUpdatedAt))
+
+			// 不変フィールドが変更されていないかチェック
+			assert.Equal(t, originalCategory, item.Category)
+			assert.Equal(t, originalPurchaseDate, item.PurchaseDate)
+			assert.Equal(t, originalCreatedAt, item.CreatedAt)
+		})
+	}
+}
+
+// ヘルパー関数
+func stringPtr(s string) *string {
+	return &s
+}
+
+func intPtr(i int) *int {
+	return &i
+}
