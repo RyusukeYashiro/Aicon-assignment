@@ -89,6 +89,26 @@ func (i *Item) Update(name, category, brand string, purchasePrice int, purchaseD
 	return i.Validate()
 }
 
+// 更新関数: name, brand, purchase_price のみ
+func (i *Item) UpdatePartial(name *string, brand *string, purchasePrice *int) error {
+	// 指定されたフィールドのみ更新
+	if name != nil {
+		i.Name = strings.TrimSpace(*name)
+	}
+	if brand != nil {
+		i.Brand = strings.TrimSpace(*brand)
+	}
+	if purchasePrice != nil {
+		i.PurchasePrice = *purchasePrice
+	}
+	
+	// updated_atは常に更新
+	i.UpdatedAt = time.Now()
+
+	// 更新後の全フィールドをバリデーション
+	return i.Validate()
+}
+
 // カテゴリーのバリデーション
 func isValidCategory(category string) bool {
 	for _, valid := range ValidCategories {
