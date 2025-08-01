@@ -64,15 +64,11 @@ func (i *Item) Validate() error {
 		errs = append(errs, "purchase_price must be 0 or greater")
 	}
 
-	// purchase_dateのバリデーションを一時的に無効化（PATCHテスト用）
-	// TODO: 後で修正
-	/*
 	if i.PurchaseDate == "" {
 		errs = append(errs, "purchase_date is required")
 	} else if !isValidDateFormat(i.PurchaseDate) {
 		errs = append(errs, "purchase_date must be in YYYY-MM-DD format")
 	}
-	*/
 
 	if len(errs) > 0 {
 		return errors.New(strings.Join(errs, ", "))
@@ -136,6 +132,10 @@ func isValidDateFormat(dateStr string) bool {
 	}
 	// RFC3339形式（データベースから取得した場合）
 	if _, err := time.Parse(time.RFC3339, dateStr); err == nil {
+		return true
+	}
+	// その他のISO 8601形式もサポート
+	if _, err := time.Parse("2006-01-02T15:04:05Z07:00", dateStr); err == nil {
 		return true
 	}
 	return false
